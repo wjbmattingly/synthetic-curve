@@ -17,10 +17,14 @@ class SyntheticCurveGenerator:
         length = random.randint(min_length, max_length)
         return ''.join(random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(length))
     
-    def generate_curve(self, width, height, curve_type="random"):
+    def generate_curve(self, width, height, curve_type=None):
         """Generate curve points for the baseline."""
         num_points = 10  # Reduced from 100 to 10 points
         x_points = np.linspace(0, width, num_points)
+        
+        # Randomly decide curve type if not specified
+        if curve_type is None:
+            curve_type = random.choice(["random", "straight"])
         
         if curve_type == "random":
             # Generate random curve
@@ -37,8 +41,22 @@ class SyntheticCurveGenerator:
         return points
     
     def draw_text_along_curve(self, text, curve_points, image_size=(800, 200), annotated=False):
-        """Draw text along a curved baseline."""
-        image = Image.new('RGB', image_size, 'white')
+        """Draw text along a curved baseline with noise and random background."""
+        # Randomly decide if this will be a perfectly clean image
+        is_clean = random.random() < 0.2  # 20% chance of being perfectly clean
+        
+        if is_clean:
+            # Create white background for clean images
+            image = Image.new('RGB', image_size, 'white')
+        else:
+            # Create random background color (light colors to ensure text visibility)
+            bg_color = (
+                random.randint(200, 255),  # R
+                random.randint(200, 255),  # G
+                random.randint(200, 255)   # B
+            )
+            image = Image.new('RGB', image_size, bg_color)
+            
         draw = ImageDraw.Draw(image)
         
         # Calculate text line polygon
@@ -71,7 +89,44 @@ class SyntheticCurveGenerator:
             # Draw character
             draw.text((x_offset, closest_point[1]), char, fill='black', font=self.font)
             x_offset += self.font.getlength(char) + char_spacing
+        
+        if not is_clean:
+            # Convert to numpy array for noise addition
+            img_array = np.array(image)
             
+            # Random chance to add each type of noise
+            if random.random() < 0.8:  # 80% chance of Gaussian noise
+                noise_level = random.uniform(5, 20)  # Random noise level
+                noise = np.random.normal(0, noise_level, img_array.shape).astype(np.uint8)
+                img_array = np.clip(img_array + noise, 0, 255)
+            
+            if random.random() < 0.7:  # 70% chance of salt and pepper noise
+                salt_pepper = np.random.random(img_array.shape[:2])
+                img_array[salt_pepper < 0.01] = 0  # Salt
+                img_array[salt_pepper > 0.99] = 255  # Pepper
+            
+            # Add random lines (more and thicker)
+            num_lines = random.randint(3, 15)  # Increased from 1-5 to 3-15
+            for _ in range(num_lines):
+                x1 = random.randint(0, image_size[0])
+                y1 = random.randint(0, image_size[1])
+                x2 = random.randint(0, image_size[0])
+                y2 = random.randint(0, image_size[1])
+                color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+                thickness = random.randint(1, 3)  # Random thickness
+                cv2.line(img_array, (x1, y1), (x2, y2), color, thickness)
+            
+            # Add random dots
+            num_dots = random.randint(20, 100)  # Increased from 10-50 to 20-100
+            for _ in range(num_dots):
+                x = random.randint(0, image_size[0]-1)
+                y = random.randint(0, image_size[1]-1)
+                color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+                img_array[y, x] = color
+            
+            # Convert back to PIL Image
+            image = Image.fromarray(img_array)
+        
         return image
     
     def create_alto_xml(self, text, curve_points, image_size, filename):
@@ -114,7 +169,10 @@ class SyntheticCurveGenerator:
         for i in range(num_samples):
             text = self.generate_random_text()
             image_size = (800, 200)
-            curve_points = self.generate_curve(image_size[0], image_size[1])
+            
+            # Randomly decide if this will be a straight line
+            curve_type = "straight" if random.random() < 0.3 else None  # 30% chance of straight line
+            curve_points = self.generate_curve(image_size[0], image_size[1], curve_type)
             
             # Generate original image
             image = self.draw_text_along_curve(text, curve_points, image_size, annotated=False)
@@ -130,4 +188,4 @@ class SyntheticCurveGenerator:
 
 if __name__ == "__main__":
     generator = SyntheticCurveGenerator()
-    generator.generate_sample(1000) 
+    generator.generate_sample(10000) 

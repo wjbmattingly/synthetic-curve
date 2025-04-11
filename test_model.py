@@ -56,7 +56,7 @@ def main(image_path=None):
         os.makedirs(test_dir, exist_ok=True)
         
         for img_name in os.listdir(output_dir):
-            if img_name.endswith('.jpg') and not img_name.endswith('_annotated.jpg'):
+            if img_name.endswith('.png') and not img_name.endswith('_annotated.jpg'):
                 img_path = os.path.join(output_dir, img_name)
                 output_path = os.path.join(test_dir, f'predicted_{img_name}')
                 

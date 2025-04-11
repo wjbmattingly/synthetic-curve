@@ -68,7 +68,7 @@ class BaselinePredictor(nn.Module):
         points = self.regression_head(features)
         return points.view(-1, 10, 2)  # Reshape to (batch_size, 10, 2)
 
-def train_model(model, train_loader, val_loader, num_epochs=2):
+def train_model(model, train_loader, val_loader, num_epochs=10):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
     criterion = nn.MSELoss()
